@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import List, Optional, Dict, Any
@@ -17,6 +18,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+
+# Noise gate: if the best memory is less similar than this to the query, recall
+# returns empty instead of forcing weakly-related facts. Tune against real scores.
+RECALL_MIN_SCORE = float(os.getenv("RECALL_MIN_SCORE", "0.3"))
 
 
 class Message(BaseModel):
@@ -82,6 +87,7 @@ def recall(request: RecallRequest):
     if q_emb is None:
         return {"context": "", "citations": []}
     hits = db.search_memories(request.user_id, q_emb, limit=10)
+    hits = [h for h in hits if h["score"] >= RECALL_MIN_SCORE]  # noise gate
     if not hits:
         return {"context": "", "citations": []}
     context = "## Known facts about this user\n" + "\n".join(f"- {h['value']}" for h in hits)
