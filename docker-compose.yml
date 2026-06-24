@@ -17,6 +17,7 @@ services:
 
   app:
     build: .
+    image: memory-service-app
     # Optional keys/overrides live in .env (provided at eval time). DB_URL stays
     # pinned to the compose 'db' service below so it can't be misrouted.
     env_file:
