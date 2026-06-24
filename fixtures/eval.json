@@ -1,0 +1,109 @@
+{
+  "scenarios": [
+    {
+      "name": "location",
+      "user_id": "eval-loc",
+      "turns": [
+        {
+          "session_id": "loc-s1",
+          "timestamp": "2025-03-10T09:00:00Z",
+          "messages": [
+            {"role": "user", "content": "I just moved to Berlin from NYC last month. Loving it so far."},
+            {"role": "assistant", "content": "That's exciting! How are you settling into Berlin?"}
+          ]
+        }
+      ],
+      "probes": [
+        {"query": "Where does this user live?", "session_id": "loc-probe", "expect": ["Berlin"]}
+      ]
+    },
+
+    {
+      "name": "employment_change",
+      "user_id": "eval-job",
+      "turns": [
+        {
+          "session_id": "job-s1",
+          "timestamp": "2025-01-15T14:00:00Z",
+          "messages": [
+            {"role": "user", "content": "I work at Stripe as a backend engineer."},
+            {"role": "assistant", "content": "Nice, how long have you been at Stripe?"}
+          ]
+        },
+        {
+          "session_id": "job-s3",
+          "timestamp": "2025-03-20T11:00:00Z",
+          "messages": [
+            {"role": "user", "content": "Big news — I just started a new job at Notion as a product manager."},
+            {"role": "assistant", "content": "Congrats on the new role at Notion!"}
+          ]
+        }
+      ],
+      "probes": [
+        {"query": "Where does the user work now?", "session_id": "job-probe", "expect": ["Notion"]}
+      ]
+    },
+
+    {
+      "name": "implicit_pet",
+      "user_id": "eval-pet",
+      "turns": [
+        {
+          "session_id": "pet-s1",
+          "timestamp": "2025-03-12T08:30:00Z",
+          "messages": [
+            {"role": "user", "content": "Sorry I'm a little late — I was out walking Biscuit this morning and lost track of time."},
+            {"role": "assistant", "content": "No worries! Sounds like a nice morning."}
+          ]
+        }
+      ],
+      "probes": [
+        {"query": "Does the user have a pet? What is its name?", "session_id": "pet-probe", "expect": ["Biscuit"]}
+      ]
+    },
+
+    {
+      "name": "multi_hop",
+      "user_id": "eval-hop",
+      "turns": [
+        {
+          "session_id": "hop-s1",
+          "timestamp": "2025-03-05T10:00:00Z",
+          "messages": [
+            {"role": "user", "content": "My dog Biscuit keeps me company while I work from home."},
+            {"role": "assistant", "content": "Dogs are great company!"}
+          ]
+        },
+        {
+          "session_id": "hop-s2",
+          "timestamp": "2025-03-08T19:00:00Z",
+          "messages": [
+            {"role": "user", "content": "Honestly the best part of moving to Berlin was discovering the parks."},
+            {"role": "assistant", "content": "Berlin has some beautiful parks!"}
+          ]
+        }
+      ],
+      "probes": [
+        {"query": "What city does the user with the dog named Biscuit live in?", "session_id": "hop-probe", "expect": ["Berlin"]}
+      ]
+    },
+
+    {
+      "name": "noise",
+      "user_id": "eval-noise",
+      "turns": [
+        {
+          "session_id": "noise-s1",
+          "timestamp": "2025-03-14T16:00:00Z",
+          "messages": [
+            {"role": "user", "content": "I'm vegetarian and I prefer concise, direct answers."},
+            {"role": "assistant", "content": "Got it — I'll keep things short."}
+          ]
+        }
+      ],
+      "probes": [
+        {"query": "What is the user's favorite programming language?", "session_id": "noise-probe", "expect": [], "expect_empty": true}
+      ]
+    }
+  ]
+}
