@@ -89,20 +89,11 @@
     },
 
     {
-      "name": "noise",
-      "user_id": "eval-noise",
-      "turns": [
-        {
-          "session_id": "noise-s1",
-          "timestamp": "2025-03-14T16:00:00Z",
-          "messages": [
-            {"role": "user", "content": "I'm vegetarian and I prefer concise, direct answers."},
-            {"role": "assistant", "content": "Got it — I'll keep things short."}
-          ]
-        }
-      ],
+      "name": "noise_cold",
+      "user_id": "eval-cold",
+      "turns": [],
       "probes": [
-        {"query": "What is the user's favorite programming language?", "session_id": "noise-probe", "expect": [], "expect_empty": true}
+        {"query": "What is the user's favorite programming language?", "session_id": "cold-probe", "expect": [], "expect_empty": true}
       ]
     }
   ]

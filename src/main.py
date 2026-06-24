@@ -83,19 +83,37 @@ def create_turn(request: ChatRequest):
 def recall(request: RecallRequest):
     if not request.user_id:
         return {"context": "", "citations": []}
+
+    # A. Stable profile — active facts/preferences are user-level, always included
+    #    (this is why multi-hop works: the answer need not appear in the query).
+    profile = [m for m in db.get_user_memories(request.user_id, active_only=True)
+               if m["type"] in ("fact", "preference")]
+
+    # B. Query-relevant memories (any type) above the noise gate.
+    relevant = []
     q_emb = extract.embed(request.query)
-    if q_emb is None:
+    if q_emb is not None:
+        relevant = [h for h in db.search_memories(request.user_id, q_emb, limit=10)
+                    if h["score"] >= RECALL_MIN_SCORE]
+
+    if not profile and not relevant:
         return {"context": "", "citations": []}
-    hits = db.search_memories(request.user_id, q_emb, limit=10)
-    hits = [h for h in hits if h["score"] >= RECALL_MIN_SCORE]  # noise gate
-    if not hits:
-        return {"context": "", "citations": []}
-    context = "## Known facts about this user\n" + "\n".join(f"- {h['value']}" for h in hits)
-    citations = [
-        {"turn_id": h["source_turn"] or "", "score": float(h["score"]), "snippet": h["value"]}
-        for h in hits
-    ]
-    return {"context": context, "citations": citations}
+
+    parts, citations, seen = [], [], set()
+    if profile:
+        parts.append("## Known facts about this user")
+        for m in profile:
+            parts.append(f"- {m['value']}")
+            seen.add(m["id"])
+            citations.append({"turn_id": m["source_turn"] or "", "score": 1.0, "snippet": m["value"]})
+    rel_new = [h for h in relevant if h["id"] not in seen]
+    if rel_new:
+        parts.append("\n## Relevant to this query")
+        for h in rel_new:
+            parts.append(f"- {h['value']}")
+            citations.append({"turn_id": h["source_turn"] or "", "score": float(h["score"]), "snippet": h["value"]})
+
+    return {"context": "\n".join(parts), "citations": citations}
 
 
 @app.post("/search")
