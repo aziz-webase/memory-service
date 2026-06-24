@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 import db
 import extract
+import supersede
 
 
 @asynccontextmanager
@@ -60,11 +61,16 @@ def create_turn(request: ChatRequest):
     turn_id = db.insert_turn(request.session_id, request.user_id, request.timestamp, msgs, request.metadata)
     if request.user_id:                         # memorylar user'ga bog'liq
         for mem in extract.extract_memories(msgs):
+            candidates = db.get_active_by_key(request.user_id, mem["key"])
+            stale = supersede.resolve_supersession(mem, candidates)
             emb = extract.embed(mem["value"])
             db.insert_memory(
                 request.user_id, request.session_id, turn_id,
                 mem["type"], mem["key"], mem["value"], mem.get("confidence", 1.0), emb,
+                supersedes=(stale[0] if stale else None),
             )
+            for old_id in stale:
+                db.deactivate_memory(old_id)
     return {"id": turn_id}
 
 
