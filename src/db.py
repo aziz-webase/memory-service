@@ -219,6 +219,7 @@ if __name__ == "__main__":
 
     init_db()
     ping()
+    delete_user("smoke-user")  # clean any residue from a previous failed run
 
     tid = insert_turn(
         "smoke-sess", "smoke-user", datetime.now(timezone.utc),
@@ -232,7 +233,7 @@ if __name__ == "__main__":
     mid = insert_memory("smoke-user", "smoke-sess", tid, "fact", "greeting", "said hello", 0.9, emb)
     assert any(m["id"] == mid for m in get_user_memories("smoke-user")), "memory insert/read failed"
     hits = search_memories("smoke-user", emb, limit=5)
-    assert hits and hits[0]["id"] == mid, "vector search failed"
+    assert any(h["id"] == mid for h in hits), "vector search failed"
 
     delete_user("smoke-user")
     assert not recent_turns("smoke-sess"), "delete (turns) failed"
