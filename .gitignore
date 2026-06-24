@@ -1,0 +1,22 @@
+# Secrets — never commit. .env.example is the template that ships.
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local model / HF cache (baked into the image, not the repo)
+models/
+.cache/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+*.swp

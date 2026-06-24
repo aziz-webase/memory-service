@@ -1,0 +1,10 @@
+.git
+__pycache__/
+*.pyc
+.env
+*.pdf
+notion-*.md
+tests/
+fixtures/
+README.md
+CHANGELOG.md
