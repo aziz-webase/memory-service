@@ -177,10 +177,10 @@ def search_memories(user_id, query_embedding, limit=10, active_only=True):
         cur.execute(
             f"""
             SELECT id, type, key, value, confidence, session_id, source_turn,
-                   1 - (embedding <=> %s) AS score
+                   1 - (embedding <=> %s::vector) AS score
             FROM memories
             WHERE user_id = %s {extra} AND embedding IS NOT NULL
-            ORDER BY embedding <=> %s
+            ORDER BY embedding <=> %s::vector
             LIMIT %s
             """,
             (query_embedding, user_id, query_embedding, limit),
