@@ -1,33 +1,15 @@
-# Core
-tqdm>=4.66.0
-
 # API
 fastapi>=0.110.0
 uvicorn[standard]>=0.29.0
 
-# PDF / text loading
-PyPDF2>=3.0.1
-
-# Vector store (pgvector / Postgres)
-langchain-postgres>=0.0.12
+# Postgres + pgvector (turns, memories, embeddings, vector search)
 psycopg[binary,pool]>=3.1.0
 pgvector>=0.2.5
 
-# LangChain
-langchain>=0.3.0
-langchain-core>=0.3.0
-langchain-community>=0.3.0
-langchain-openai>=0.2.0
-langchain-text-splitters>=0.3.0
-langchain-classic>=0.1.0
-
-# OpenAI (chat + embeddings)
+# OpenAI (extraction chat + embeddings)
 openai>=1.30.0
 
-# Reranker (BAAI/bge-reranker-v2-m3 via sentence-transformers CrossEncoder)
+# Cross-encoder reranker (BAAI/bge-reranker-v2-m3)
 sentence-transformers>=3.0.0
 torch>=2.1.0
 transformers>=4.40.0
-
-# Retrieval (BM25 hybrid search)
-rank_bm25>=0.2.2
