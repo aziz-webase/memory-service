@@ -41,7 +41,8 @@ def req(method, path, body=None, raw_body=None):
             return e.code, (json.loads(b) if b else None)
         except Exception:
             return e.code, None
-    except urllib.error.URLError:
+    except OSError:
+        # connection refused/reset/timeout — e.g. while the service restarts
         return 0, None
 
 
