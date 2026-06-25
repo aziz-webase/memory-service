@@ -99,21 +99,31 @@ def recall(request: RecallRequest):
     if not profile and not relevant:
         return {"context": "", "citations": []}
 
-    parts, citations, seen = [], [], set()
-    if profile:
-        parts.append("## Known facts about this user")
-        for m in profile:
-            parts.append(f"- {m['value']}")
-            seen.add(m["id"])
-            citations.append({"turn_id": m["source_turn"] or "", "score": 1.0, "snippet": m["value"]})
-    rel_new = [h for h in relevant if h["id"] not in seen]
-    if rel_new:
-        parts.append("\n## Relevant to this query")
-        for h in rel_new:
-            parts.append(f"- {h['value']}")
-            citations.append({"turn_id": h["source_turn"] or "", "score": float(h["score"]), "snippet": h["value"]})
+    # Assemble within the token budget, by priority: stable profile facts first,
+    # then query-relevant memories. ~4 chars/token; the brief says approximate is fine.
+    budget_chars = max(request.max_tokens, 0) * 4
+    headers = {"facts": "## Known facts about this user", "relevant": "## Relevant to this query"}
+    profile_ids = {m["id"] for m in profile}
+    cands = [("facts", m) for m in profile]
+    cands += [("relevant", h) for h in relevant if h["id"] not in profile_ids]
 
-    return {"context": "\n".join(parts), "citations": citations}
+    used = 0
+    chosen = {"facts": [], "relevant": []}
+    citations = []
+    for section, m in cands:
+        line = f"- {m['value']}"
+        cost = len(line) + 1 + (len(headers[section]) + 1 if not chosen[section] else 0)
+        if used + cost > budget_chars:
+            break  # budget exhausted — stop here to keep strict priority order
+        used += cost
+        chosen[section].append(line)
+        score = 1.0 if section == "facts" else float(m["score"])
+        citations.append({"turn_id": m["source_turn"] or "", "score": score, "snippet": m["value"]})
+
+    if not citations:
+        return {"context": "", "citations": []}
+    blocks = [headers[s] + "\n" + "\n".join(chosen[s]) for s in ("facts", "relevant") if chosen[s]]
+    return {"context": "\n\n".join(blocks), "citations": citations}
 
 
 @app.post("/search")
