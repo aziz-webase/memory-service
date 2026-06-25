@@ -44,6 +44,11 @@ communication_style
 Rules:
 - Resolve IMPLICIT facts. "walking Biscuit this morning" -> \
 {type:"fact", key:"pet_name", value:"Has a pet named Biscuit", confidence:0.8}.
+- A mention of moving to / relocating to / living in / settling in a place is a \
+LOCATION fact, even when the sentence is phrased as an aside or opinion: "the best \
+part of moving to Berlin was the parks" -> \
+{type:"fact", key:"location", value:"Lives in Berlin", confidence:0.8} (you may also \
+extract the separate opinion about the parks).
 - Handle CORRECTIONS. "actually I meant X, not Y" -> extract the corrected value X.
 - One memory per distinct fact; do not duplicate.
 - If there is nothing memorable about the user, return an empty list."""
