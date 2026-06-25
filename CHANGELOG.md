@@ -3,6 +3,27 @@
 Iteration history for the memory service. Newest first. Each entry: what changed,
 why, what it produced, and what's next.
 
+## v5 — Hybrid retrieval + reranking, token budget, contract tests
+**What changed:** (1) `/recall` now enforces the `max_tokens` budget, filling in strict
+priority order (profile facts → query-relevant) and stopping when full. (2) The relevant
+section became hybrid: pgvector cosine + Postgres full-text, fused with Reciprocal Rank
+Fusion, then cross-encoder reranked (`bge-reranker-v2-m3`); the noise gate now thresholds
+the reranker's 0..1 relevance. (3) Added `tests/test_contract.py` — roundtrip, cross-user
+isolation, malformed input (4xx, no crash), restart persistence.
+
+**Why:** the brief warns vanilla cosine top-k won't score, asks for an explicit
+budget/priority policy, and requires the contract tests. RRF fuses vector and keyword on
+rank (no score normalization), recovering keyword-heavy queries a pure vector search
+misses; the reranker sharpens ordering.
+
+**Result:** local fixture stays **5/5** — it's driven by the always-on profile, so
+hybrid/rerank don't change it; they target the harder held-out queries over events and
+opinions. Contract tests: **15/15**. Trade: reranking adds CPU latency to `/recall` (the
+model loads lazily on the first call).
+
+**Next:** opinion-arc synthesis into a current stance; a stored `tsvector` + GIN index if
+memory counts grow.
+
 ## v4 — Recall ranking: stable-facts-first, not cosine top-k
 **What changed:** Reworked `/recall` into two sections — (A) the user's active facts &
 preferences, ALWAYS included (the stable profile), and (B) query-relevant memories above

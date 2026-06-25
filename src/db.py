@@ -188,6 +188,29 @@ def search_memories(user_id, query_embedding, limit=10, active_only=True):
         return cur.fetchall()
 
 
+def keyword_search_memories(user_id, query_text, limit=20, active_only=True):
+    """Full-text (BM25-ish) recall over memory values. Pairs with vector search for
+    hybrid retrieval. Computed on the fly — fine at eval scale; add a stored tsvector
+    + GIN index if memory counts grow."""
+    extra = "AND active = true" if active_only else ""
+    with pool.connection() as conn:
+        cur = conn.cursor(row_factory=dict_row)
+        cur.execute(
+            f"""
+            SELECT id, type, key, value, confidence, session_id, source_turn,
+                   ts_rank_cd(to_tsvector('english', value),
+                              plainto_tsquery('english', %s)) AS score
+            FROM memories
+            WHERE user_id = %s {extra}
+              AND to_tsvector('english', value) @@ plainto_tsquery('english', %s)
+            ORDER BY score DESC
+            LIMIT %s
+            """,
+            (query_text, user_id, query_text, limit),
+        )
+        return cur.fetchall()
+
+
 def deactivate_memory(mem_id) -> None:
     """Mark a memory superseded (kept for history, not deleted). For phase 3."""
     with pool.connection() as conn:

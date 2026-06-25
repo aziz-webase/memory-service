@@ -9,6 +9,7 @@ from pydantic import BaseModel
 import db
 import extract
 import supersede
+import retrieve
 
 
 @asynccontextmanager
@@ -19,8 +20,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Noise gate: if the best memory is less similar than this to the query, recall
-# returns empty instead of forcing weakly-related facts. Tune against real scores.
+# Noise gate on the reranker's relevance (0..1): relevant memories below this are
+# dropped, so off-topic queries don't force weakly-related hits into context.
 RECALL_MIN_SCORE = float(os.getenv("RECALL_MIN_SCORE", "0.3"))
 
 
@@ -89,12 +90,11 @@ def recall(request: RecallRequest):
     profile = [m for m in db.get_user_memories(request.user_id, active_only=True)
                if m["type"] in ("fact", "preference")]
 
-    # B. Query-relevant memories (any type) above the noise gate.
-    relevant = []
+    # B. Query-relevant memories — hybrid (vector + keyword, RRF) then reranked.
+    #    `score` is the cross-encoder relevance (0..1); gate out weak/noise hits.
     q_emb = extract.embed(request.query)
-    if q_emb is not None:
-        relevant = [h for h in db.search_memories(request.user_id, q_emb, limit=10)
-                    if h["score"] >= RECALL_MIN_SCORE]
+    relevant = [h for h in retrieve.relevant(request.user_id, request.query, q_emb, top_n=8)
+                if h["score"] >= RECALL_MIN_SCORE]
 
     if not profile and not relevant:
         return {"context": "", "citations": []}

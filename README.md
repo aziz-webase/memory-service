@@ -95,8 +95,11 @@ call plus one embedding per extracted memory.
    answered because `location` is in the profile even though "Berlin" never appears in the
    query — a pure top-k vector search can't retrieve an answer whose tokens aren't in the
    query.
-2. **Relevant to this query.** Other memories ranked by cosine similarity (pgvector),
-   filtered by `RECALL_MIN_SCORE` (a noise gate — weakly related memories are dropped).
+2. **Relevant to this query.** Hybrid retrieval — pgvector cosine **and** Postgres
+   full-text search, fused with **Reciprocal Rank Fusion**, then **cross-encoder reranked**
+   (`bge-reranker-v2-m3`, `src/retrieve.py` + `src/rerank.py`). The reranker's relevance
+   (0..1) gates out noise via `RECALL_MIN_SCORE`. RRF fuses on rank (no score
+   normalization), so keyword-heavy queries a pure vector search misses are recovered.
 
 **Token budget.** We fill in strict priority order — profile first, then relevant — adding
 lines while they fit under `max_tokens` (estimated at ~4 chars/token; the brief says
@@ -132,11 +135,11 @@ the arc into a single "current stance" summary — that's noted as future work.
 
 - **One Postgres vs. specialized stores** — chose operational simplicity and synchronous
   correctness over best-in-class vector latency. Fine at the brief's scale.
-- **Recall is profile-always + cosine + budget** — deliberately simple and debuggable. A
-  hybrid keyword/BM25 stage and a cross-encoder reranker (`src/rag.py` has both as building
-  blocks; the reranker is baked into the image) are **not yet wired into the hot path** —
-  they're the next lever for the harder held-out eval. Char-based token estimate avoids a
-  `tiktoken` dependency at the cost of exactness.
+- **Recall = profile-always + hybrid-relevant + budget.** The relevant section uses vector
+  + keyword fused with RRF and a cross-encoder reranker; the profile section is a straight
+  active-facts dump. Reranking adds CPU latency to `/recall` (the model loads lazily on the
+  first call), acceptable at this scale. Char-based token estimate avoids a `tiktoken`
+  dependency at the cost of exactness.
 - **Inline extraction** — simpler and meets the sync-correctness requirement, at the cost of
   `/turns` latency (one LLM + N embedding calls). The brief explicitly allows this.
 - **Fixed canonical-key vocabulary** — strong supersession on known topics, weaker on novel
@@ -155,6 +158,8 @@ the arc into a single "current stance" summary — that's noted as future work.
   `jsonb`.
 - **Restart mid-flight** — writes are single committed transactions; a named volume makes
   restart invisible to clients (proven by the restart-persistence test).
+- **First recall after boot** — the cross-encoder reranker loads lazily (a few seconds on
+  CPU); later recalls are fast. If it can't load, reranking falls back to fusion order.
 
 ## Cross-session scoping
 
